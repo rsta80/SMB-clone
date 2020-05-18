@@ -36,18 +36,19 @@ public class MainMenu : MonoBehaviour {
 
 		Debug.Log (this.name + " Start: Volume Setting sound=" + PlayerPrefs.GetFloat ("soundVolume")
 			+ "; music=" + PlayerPrefs.GetFloat ("musicVolume"));
+		StartNewGame();
 	}
 
 	public void OnMouseHover(Button button) {
 		if (!volumePanelActive) {
-			GameObject cursor = button.transform.FindChild ("Cursor").gameObject;
+			GameObject cursor = button.transform.Find ("Cursor").gameObject;
 			cursor.SetActive (true);
 		}
 	}
 
 	public void OnMouseHoverExit(Button button) {
 		if (!volumePanelActive) {
-			GameObject cursor = button.transform.FindChild ("Cursor").gameObject;
+			GameObject cursor = button.transform.Find ("Cursor").gameObject;
 			cursor.SetActive (false);
 		}
 	}

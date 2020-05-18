@@ -6,9 +6,8 @@ using UnityEngine.SceneManagement;
 using System.Text.RegularExpressions;
 
 
-public class LevelManager : MonoBehaviour {
-	//private const float loadSceneDelay = 1f;
-	private const float loadSceneDelay = 0;
+public class LevelManagerOld : MonoBehaviour {
+	private const float loadSceneDelay = 1f;
 
 	public bool hurryUp; // within last 100 secs?
 	public int marioSize; // 0..2
@@ -81,7 +80,7 @@ public class LevelManager : MonoBehaviour {
 
 
 	void Awake() {
-		Time.timeScale = 2; //TIME
+		Time.timeScale = 1;
 	}
 
 	// Use this for initialization
@@ -125,7 +124,7 @@ public class LevelManager : MonoBehaviour {
 	/****************** Timer */
 	void Update() {
 		if (!timerPaused) {
-			timeLeft -= Time.deltaTime / .4f; // 1 game sec ~ 0.4 real time sec			
+			timeLeft -= Time.deltaTime / .4f; // 1 game sec ~ 0.4 real time sec
 			SetHudTime ();
 		}
 
@@ -267,7 +266,7 @@ public class LevelManager : MonoBehaviour {
 		yield return new WaitForSecondsRealtime (transformDuration);
 		yield return new WaitWhile(() => gamePaused);
 
-		Time.timeScale = 2; //TIME
+		Time.timeScale = 1;
 		mario_Animator.updateMode = AnimatorUpdateMode.Normal;
 
 		marioSize++;
@@ -300,7 +299,7 @@ public class LevelManager : MonoBehaviour {
 		yield return new WaitForSecondsRealtime (transformDuration);
 		yield return new WaitWhile(() => gamePaused);
 
-		Time.timeScale = 2; //TIME
+		Time.timeScale = 1;
 		mario_Animator.updateMode = AnimatorUpdateMode.Normal;
 		MarioInvinciblePowerdown ();
 
@@ -315,14 +314,14 @@ public class LevelManager : MonoBehaviour {
 			isRespawning = true;
 
 			marioSize = 0;
-			//lives--;
+			lives--;
 
 			soundSource.Stop ();
 			musicSource.Stop ();
 			musicPaused = true;
 			soundSource.PlayOneShot (deadSound);
 
-			Time.timeScale = 100f;
+			Time.timeScale = 0f;
 			mario.FreezeAndDie ();
 
 			if (timeup) {
@@ -330,12 +329,12 @@ public class LevelManager : MonoBehaviour {
 			}
 			Debug.Log (this.name + " MarioRespawn: lives left=" + lives.ToString ());
 
-			//if (lives > 0) {
+			if (lives > 0) {
 				ReloadCurrentLevel (deadSound.length, timeup);
-			/*} else {
+			} else {
 				LoadGameOver (deadSound.length, timeup);
 				Debug.Log(this.name + " MarioRespawn: all dead");
-			}*/
+			}
 		}
 	}
 		
@@ -386,12 +385,12 @@ public class LevelManager : MonoBehaviour {
 		Debug.Log (this.name + " LoadSceneDelayCo: starts loading " + sceneName);
 
 		float waited = 0;
-		/*while (waited < delay) {
+		while (waited < delay) {
 			if (!gamePaused) { // should not count delay while game paused
 				waited += Time.unscaledDeltaTime;
 			}
 			yield return null;
-		}*/
+		}
 		yield return new WaitWhile (() => gamePaused);
 
 		Debug.Log (this.name + " LoadSceneDelayCo: done loading " + sceneName);
@@ -566,7 +565,7 @@ public class LevelManager : MonoBehaviour {
 			+ " spawnPipeIdx= " + t_GameStateManager.spawnPipeIdx.ToString() 
 			+ " spawnPointIdx=" + t_GameStateManager.spawnPointIdx.ToString());
 		if (t_GameStateManager.spawnFromPoint) {
-			spawnPosition = GameObject.Find ("Spawn Points").transform.GetChild (t_GameStateManager.spawnPointIdx).transform.position;			
+			spawnPosition = GameObject.Find ("Spawn Points").transform.GetChild (t_GameStateManager.spawnPointIdx).transform.position;
 		} else {
 			spawnPosition = GameObject.Find ("Spawn Pipes").transform.GetChild (t_GameStateManager.spawnPipeIdx).transform.Find("Spawn Pos").transform.position;
 		}

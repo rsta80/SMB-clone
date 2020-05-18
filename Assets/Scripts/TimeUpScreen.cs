@@ -13,12 +13,13 @@ public class TimeUpScreen : MonoBehaviour {
 	public Text ScoreTextHUD;
 	public Text CoinTextHUD;
 
-	private float loadScreenDelay = 2;
+	//private float loadScreenDelay = 2;
+	private float loadScreenDelay = 0;
 
 
 	// Use this for initialization
 	void Start () {
-		Time.timeScale = 1;
+		Time.timeScale = 10;
 
 		t_GameStateManager = FindObjectOfType<GameStateManager> ();
 		string worldName = t_GameStateManager.sceneToLoad;
