@@ -1,8 +1,10 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 using Unity.MLAgents;
 using Unity.MLAgents.Sensors;
+using UnityEngine.SceneManagement;
 
 
 /* Mario physics reference: http://s276.photobucket.com/user/jdaster64/media/smb_playerphysics.png.html */
@@ -10,6 +12,7 @@ using Unity.MLAgents.Sensors;
 
 public class Mario : Agent {
 	private LevelManager t_LevelManager;
+	private MainCamera t_MainCamera;
 	private Transform m_GroundCheck1, m_GroundCheck2;
 	private GameObject m_StompBox;
 	private Animator m_Animator;
@@ -62,34 +65,173 @@ public class Mario : Agent {
 	private bool jumpButtonHeld;
 	private bool jumpButtonReleased;
 
-	public bool inputFreezed;
+	public bool inputFreezed;	
 
-	private GameStateManager t_GameStateManager;
+	//private GameStateManager t_GameStateManager;
+
+	//GameStateManager
+	public bool spawnFromPoint;
+	public int spawnPointIdx;
+	public int spawnPipeIdx;
+	public int marioSize;
+	public int lives;
+	public int coins;
+	public int scores;
+	public float timeLeft;
+	public bool hurryUp;
+
+	//Reload Scene
+	public GameObject enemies;
+	public GameObject blocks;
+	public GameObject dEnemies;
+	public GameObject dBlocks;
+
+	/*public void Awake(){ 
+
+		if (FindObjectsOfType (GetType ()).Length == 1) {
+			//DontDestroyOnLoad (gameObject);
+			ConfigNewGame ();
+		} else {
+			Destroy (gameObject);
+		}
+
+	}*/
+
+	public void ConfigNewGame() {
+		marioSize = 0;
+		lives = 3;
+		coins = 0;
+		scores = 0;
+		timeLeft = 400.5f;
+		hurryUp = false;
+		ResetSpawnPosition ();
+		
+	}
+
+	public void ResetSpawnPosition() {
+		spawnFromPoint = true;
+		spawnPointIdx = 0;
+		spawnPipeIdx = 0;
+	}
 
 
-	// Use this for initialization
-	void Start () {
-		t_GameStateManager = FindObjectOfType<GameStateManager>();
+	    // Start is called before the first frame update
+    public override void Initialize()
+    {
+
+		Academy.Instance.AutomaticSteppingEnabled = false;	
+		//t_GameStateManager = FindObjectOfType<GameStateManager>();
 		t_LevelManager = FindObjectOfType<LevelManager>();
+		t_MainCamera = FindObjectOfType<MainCamera>();
+
 		m_GroundCheck1 = transform.Find ("Ground Check 1");
 		m_GroundCheck2 = transform.Find ("Ground Check 2");
 		m_StompBox = transform.Find ("Stomp Box").gameObject;
 		m_Animator = GetComponent<Animator> ();
 		m_Rigidbody2D = GetComponent<Rigidbody2D> ();
 		m_CircleCollider2D = GetComponent<CircleCollider2D> ();
-		normalGravity = m_Rigidbody2D.gravityScale;
+		normalGravity = m_Rigidbody2D.gravityScale;		
+		
+	}
 
+	public override void OnEpisodeBegin()
+    {			
+
+		enemies = Instantiate(dEnemies, new Vector3(0, 0, 0), Quaternion.identity);
+		blocks = Instantiate(dBlocks, new Vector3(0, 0, 0), Quaternion.identity);
+
+		t_MainCamera.Init();	
+		t_LevelManager.Init();
+		ConfigNewGame ();
 		// Drop Mario at spawn position
-		transform.position = FindObjectOfType<LevelManager>().FindSpawnPosition();
+		transform.localPosition = FindObjectOfType<LevelManager>().FindSpawnPosition();
 
 		// Set correct size
 		UpdateSize ();
+		UnfreezeUserInput();
 
 		jumpButtonReleased = true;
 		fireTime1 = 0;
 		fireTime2 = 0;
+		
 	}
 
+	public override void CollectObservations(VectorSensor sensor)
+    {
+        sensor.AddObservation(m_Rigidbody2D.position);		
+		sensor.AddObservation(moveDirectionX);
+		sensor.AddObservation(currentSpeedX);
+		sensor.AddObservation(speedXBeforeJump);
+		sensor.AddObservation(jumpSpeedY);			
+	}
+
+	public override void OnActionReceived(float[] action)
+    {	
+		//AddReward(this.transform.position.x/193f);
+		//AddReward(-1 + (t_LevelManager.timeLeft/400f));
+		
+		MoveAgent(action);
+				
+	}
+
+	public void MoveAgent(float[] act)
+    {		
+		if (!inputFreezed) {
+			faceDirectionX = act[0]; // > 0 for right, < 0 for left			
+			isDashing = (act[2]==0)?true:false;
+			isCrouching = (act[3]==1)?true:false;
+			isShooting = (act[2]==1)?true:false;
+			jumpButtonHeld = (act[1]==1)?true:false;			
+			jumpButtonReleased = true;
+			
+		}
+
+		isFalling = m_Rigidbody2D.velocity.y < 0 && !isGrounded;
+		isGrounded = Physics2D.OverlapPoint (m_GroundCheck1.position, GroundLayers) || Physics2D.OverlapPoint (m_GroundCheck2.position, GroundLayers); 
+		isChangingDirection = currentSpeedX > 0 && faceDirectionX * moveDirectionX < 0;
+
+
+		if (inputFreezed && !t_LevelManager.gamePaused) {
+			if (isDying) {
+				deadUpTimer -= Time.unscaledDeltaTime;
+				if (deadUpTimer > 0) { // TODO MovePosition not working
+					//m_Rigidbody2D.MovePosition (m_Rigidbody2D.position + deadUpVelocity * Time.unscaledDeltaTime);
+					gameObject.transform.position += Vector3.up * .22f;
+				} else {
+					//m_Rigidbody2D.MovePosition (m_Rigidbody2D.position + deadDownVelocity * Time.unscaledDeltaTime);
+					gameObject.transform.position += Vector3.down * .2f;
+				}
+			} else if (isClimbingFlagPole) {
+				//m_Rigidbody2D.MovePosition (m_Rigidbody2D.position + climbFlagPoleVelocity * Time.deltaTime);
+				Debug.Log("Mario has reached goal, reward +1");
+				SetReward(1f);
+				EndEpisode();
+				SceneManager.LoadScene ("World 1-1");
+			}
+		}
+		
+	}
+
+	public override void Heuristic(float[] actionsOut)
+    {
+		actionsOut[0]=0;
+		actionsOut[1]=0;
+		actionsOut[2]=0;
+		actionsOut[3]=0;		
+	
+		actionsOut[0] = Input.GetAxisRaw ("Horizontal");
+		//Jumping
+		if(Input.GetKey(KeyCode.W))
+		{
+			actionsOut[1] = 1;			
+			
+		}        
+		//Dashing
+		actionsOut[2] = Input.GetKey(KeyCode.Space) ? 1.0f : 0.0f;
+		//Crouch
+		actionsOut[3] = Input.GetKey(KeyCode.S) ? 1.0f : 0.0f;		
+		
+	}
 
 	/****************** Movement control */
 	void SetJumpParams() {
@@ -123,7 +265,10 @@ public class Mario : Agent {
 	}
 
 
-	void FixedUpdate () {	
+	void FixedUpdate() {	
+
+		Academy.Instance.EnvironmentStep();			
+		
 		/******** Horizontal movement on ground */
 		if (isGrounded) {
 			// If holding directional button, accelerate until reach max walk speed
@@ -194,8 +339,9 @@ public class Mario : Agent {
 			m_Rigidbody2D.gravityScale = normalGravity;
 		}
 
+		//Debug.Log("Is grounded: " + isGrounded + " , Is jumpbuttonheld: " + jumpButtonHeld + " , Is jumpbuttonreleased: " + jumpButtonReleased );		
 		if (!isJumping) {
-			if (isGrounded && jumpButtonHeld && jumpButtonReleased) {
+			if (isGrounded && jumpButtonHeld && jumpButtonReleased) {				
 				SetJumpParams ();
 				m_Rigidbody2D.velocity = new Vector2 (m_Rigidbody2D.velocity.x, jumpSpeedY);
 				isJumping = true;
@@ -216,7 +362,6 @@ public class Mario : Agent {
 			}
 		}
 
-
 		// Disable Stomp Box if not falling down
 		// Disable Circle Collider if falling down (to prevent multi collisions registered)
 		if (!isFalling) {
@@ -226,8 +371,6 @@ public class Mario : Agent {
 			m_StompBox.SetActive (true);
 			m_CircleCollider2D.enabled = false;
 		}
-
-
 
 		/******** Horizontal orientation */
 		if (faceDirectionX > 0) {
@@ -311,14 +454,16 @@ public class Mario : Agent {
 //	Vector2 deadUpVelocity = new Vector2 (0, 10f);
 //	Vector2 deadDownVelocity = new Vector2 (0, -15f);
 	public void FreezeAndDie() {
-		FreezeUserInput ();
+		//FreezeUserInput ();
 		isDying = true;
-		m_Rigidbody2D.bodyType = RigidbodyType2D.Kinematic;
+		/*m_Rigidbody2D.bodyType = RigidbodyType2D.Kinematic;
 		m_Animator.SetTrigger ("respawn");
 		gameObject.layer = LayerMask.NameToLayer ("Falling to Kill Plane");
-		gameObject.GetComponent<SpriteRenderer>().sortingLayerName = "Foreground Effect";
-		AgentReward(2);
- 		EndEpisode();
+		gameObject.GetComponent<SpriteRenderer>().sortingLayerName = "Foreground Effect";	*/
+
+		AddReward(-0.5f);
+		//EndEpisode();		
+		//SceneManager.LoadScene ("World 1-1");	
 	}
 
 
@@ -329,7 +474,7 @@ public class Mario : Agent {
 		isClimbingFlagPole = true;
 		m_Animator.SetBool ("climbFlagPole", true);
 		m_Rigidbody2D.bodyType = RigidbodyType2D.Kinematic;
-		Debug.Log (this.name + ": Mario starts climbing flag pole");
+		Debug.Log (this.name + ": Mario starts climbing flag pole");		
 	}
 
 
@@ -415,18 +560,19 @@ public class Mario : Agent {
 		bool bottomHit = normal == bottomSide;
 
 		if (other.gameObject.tag.Contains ("Enemy")) { // TODO: koopa shell static does no damage
-			Enemy enemy = other.gameObject.GetComponent<Enemy> ();
+			Enemy enemy = other.gameObject.GetComponent<Enemy> ();			
 
-			if (!t_LevelManager.isInvincible ()) {
+			if (!t_LevelManager.isInvincible ()) {				
+											
 				if (!other.gameObject.GetComponent<KoopaShell> () || 
 					other.gameObject.GetComponent<KoopaShell> ().isRolling ||  // non-rolling shell should do no damage
+					!t_LevelManager.stompedInteraction ||
 					!bottomHit || (bottomHit && !enemy.isBeingStomped)) 
-				{
+				{					
 					Debug.Log (this.name + " OnCollisionEnter2D: Damaged by " + other.gameObject.name
 						+ " from " + normal.ToString () + "; isFalling=" + isFalling); // TODO sometimes fire before stompbox reacts
-					t_LevelManager.MarioPowerDown ();
+						t_LevelManager.MarioPowerDown ();
 				}
-
 			} else if (t_LevelManager.isInvincibleStarman) {
 				t_LevelManager.MarioStarmanTouchEnemy (enemy);
 			}
@@ -434,120 +580,10 @@ public class Mario : Agent {
 		} else if (other.gameObject.tag == "Goal" && isClimbingFlagPole && bottomHit) {
 			Debug.Log (this.name + ": Mario hits bottom of flag pole");
 			isClimbingFlagPole = false;
-			JumpOffPole ();
-			AgentReward(3);
-			t_GameStateManager.ResetSpawnPosition();
-			EndEpisode();
+			JumpOffPole ();			
 		}
+		t_LevelManager.stompedInteraction = false;
 	}
 
-	public override void OnEpisodeBegin()
-    {		
-		m_GroundCheck1 = transform.Find ("Ground Check 1");
-		m_GroundCheck2 = transform.Find ("Ground Check 2");
-		m_StompBox = transform.Find ("Stomp Box").gameObject;
-		m_Animator = GetComponent<Animator> ();
-		m_Rigidbody2D = GetComponent<Rigidbody2D> ();
-		m_CircleCollider2D = GetComponent<CircleCollider2D> ();
-		normalGravity = m_Rigidbody2D.gravityScale;
-
-		// Drop Mario at spawn position
-		transform.position = FindObjectOfType<LevelManager>().FindSpawnPosition();
-
-		// Set correct size
-		UpdateSize ();
-
-		jumpButtonReleased = true;
-		fireTime1 = 0;
-		fireTime2 = 0;
-	}
-
-	public override void CollectObservations(VectorSensor sensor)
-    {
-        sensor.AddObservation(m_Rigidbody2D.position);
-		sensor.AddObservation(isGrounded);
-		sensor.AddObservation(moveDirectionX);
-		sensor.AddObservation(jumpSpeedY);		
-		sensor.AddObservation(isDying);
-        sensor.AddObservation(t_LevelManager.timeLeft);		
-		
-	}
-
-	public override void OnActionReceived(float[] action)
-    {				
-		MoveAgent(action);
-		if(faceDirectionX < 0)
-			AgentReward(0);			
-		else if(faceDirectionX > 0)
-			AgentReward(1);
-
-	}
-
-	public void MoveAgent(float[] act)
-    {		
-		if (!inputFreezed) {
-			faceDirectionX = act[0]; // > 0 for right, < 0 for left			
-			isDashing = (act[2]==0)?true:false;
-			isCrouching = (act[3]==1)?true:false;
-			isShooting = (act[2]==1)?true:false;
-			jumpButtonHeld = (act[1]==1)?true:false;
-			jumpButtonReleased = (act[1]==1)?true:false;						
-		}
-
-		isFalling = m_Rigidbody2D.velocity.y < 0 && !isGrounded;
-		isGrounded = Physics2D.OverlapPoint (m_GroundCheck1.position, GroundLayers) || Physics2D.OverlapPoint (m_GroundCheck2.position, GroundLayers); 
-		isChangingDirection = currentSpeedX > 0 && faceDirectionX * moveDirectionX < 0;
-
-
-		if (inputFreezed && !t_LevelManager.gamePaused) {
-			if (isDying) {
-				deadUpTimer -= Time.unscaledDeltaTime;
-				if (deadUpTimer > 0) { // TODO MovePosition not working
-					//m_Rigidbody2D.MovePosition (m_Rigidbody2D.position + deadUpVelocity * Time.unscaledDeltaTime);
-					gameObject.transform.position += Vector3.up * .22f;
-				} else {
-					//m_Rigidbody2D.MovePosition (m_Rigidbody2D.position + deadDownVelocity * Time.unscaledDeltaTime);
-					gameObject.transform.position += Vector3.down * .2f;
-				}
-			} else if (isClimbingFlagPole) {
-				m_Rigidbody2D.MovePosition (m_Rigidbody2D.position + climbFlagPoleVelocity * Time.deltaTime);
-				Debug.Log("Mario ha llegado a la meta");
-			}
-		}
-		
-	}
-
-	public override void Heuristic(float[] actionsOut)
-    {
-	
-		actionsOut[0] = Input.GetAxisRaw ("Horizontal");
-		//Jumping
-        actionsOut[1] = Input.GetKey(KeyCode.W) ? 1.0f : 0.0f;		
-		//Dashing
-		actionsOut[2] = Input.GetKey(KeyCode.Space) ? 1.0f : 0.0f;
-		//Crouch
-		actionsOut[3] = Input.GetKey(KeyCode.S) ? 1.0f : 0.0f;
-
-	}
-
-	public void AgentReward(int option){
-
-		switch (option)
-		{
-			case 0:
-				AddReward(-0.0005f);
-				break;
-			case 1:
-				AddReward(-0.0005f);
-				break;
-			case 2:
-				SetReward(-1f);
-				break;
-			case 3:
-				SetReward(1f);
-				break;
-		}
-
-	}
 
 }

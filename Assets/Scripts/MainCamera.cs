@@ -17,6 +17,10 @@ public class MainCamera : MonoBehaviour {
 
 	// Use this for initialization
 	void Start () {
+		
+	}
+
+	public void Init(){
 		Mario mario = FindObjectOfType<Mario> ();
 		target = mario.gameObject;
 

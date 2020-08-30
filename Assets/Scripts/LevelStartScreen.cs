@@ -9,7 +9,7 @@ using System.Text.RegularExpressions;
 public class LevelStartScreen : MonoBehaviour {
 	private GameStateManager t_GameStateManager;
 	//private float loadScreenDelay = 2;
-	private float loadScreenDelay = 0;
+	private float loadScreenDelay = 0f;
 
 	public Text WorldTextHUD;
 	public Text ScoreTextHUD;
