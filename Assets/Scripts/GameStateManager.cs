@@ -18,24 +18,13 @@ public class GameStateManager : MonoBehaviour {
 	public string sceneToLoad; // what scene to load after level start screen finishes?
 	public bool timeup;
 
-	/*void Awake () {
-		/*if (FindObjectsOfType (GetType ()).Length == 1) {
+	void Awake () {
+		if (FindObjectsOfType (GetType ()).Length == 1) {
 			//DontDestroyOnLoad (gameObject);
 			ConfigNewGame ();
 		} else {
 			Destroy (gameObject);
 		}
-	}*/
-
-	void Awake(){ 
-
-		/*if (FindObjectsOfType (GetType ()).Length == 1) {
-			//DontDestroyOnLoad (gameObject);
-			ConfigNewGame ();
-		} else {
-			Destroy (gameObject);
-		}*/
-
 	}
 	
 	public void ResetSpawnPosition() {

@@ -67,62 +67,17 @@ public class Mario : Agent {
 
 	public bool inputFreezed;	
 
-	//private GameStateManager t_GameStateManager;
-
-	//GameStateManager
-	public bool spawnFromPoint;
-	public int spawnPointIdx;
-	public int spawnPipeIdx;
-	public int marioSize;
-	public int lives;
-	public int coins;
-	public int scores;
-	public float timeLeft;
-	public bool hurryUp;
-
-	//Reload Scene
-	public GameObject enemies;
-	public GameObject blocks;
-	public GameObject dEnemies;
-	public GameObject dBlocks;
-
-	/*public void Awake(){ 
-
-		if (FindObjectsOfType (GetType ()).Length == 1) {
-			//DontDestroyOnLoad (gameObject);
-			ConfigNewGame ();
-		} else {
-			Destroy (gameObject);
-		}
-
-	}*/
-
-	public void ConfigNewGame() {
-		marioSize = 0;
-		lives = 3;
-		coins = 0;
-		scores = 0;
-		timeLeft = 400.5f;
-		hurryUp = false;
-		ResetSpawnPosition ();
-		
-	}
-
-	public void ResetSpawnPosition() {
-		spawnFromPoint = true;
-		spawnPointIdx = 0;
-		spawnPipeIdx = 0;
-	}
+	private GameStateManager t_GameStateManager;
 
 
-	    // Start is called before the first frame update
+
+	// Start is called before the first frame update
     public override void Initialize()
     {
 
 		Academy.Instance.AutomaticSteppingEnabled = false;	
-		//t_GameStateManager = FindObjectOfType<GameStateManager>();
+		t_GameStateManager = FindObjectOfType<GameStateManager>();
 		t_LevelManager = FindObjectOfType<LevelManager>();
-		t_MainCamera = FindObjectOfType<MainCamera>();
 
 		m_GroundCheck1 = transform.Find ("Ground Check 1");
 		m_GroundCheck2 = transform.Find ("Ground Check 2");
@@ -137,22 +92,13 @@ public class Mario : Agent {
 	public override void OnEpisodeBegin()
     {			
 
-		enemies = Instantiate(dEnemies, new Vector3(0, 0, 0), Quaternion.identity);
-		blocks = Instantiate(dBlocks, new Vector3(0, 0, 0), Quaternion.identity);
-
-		t_MainCamera.Init();	
-		t_LevelManager.Init();
-		ConfigNewGame ();
-		// Drop Mario at spawn position
-		transform.localPosition = FindObjectOfType<LevelManager>().FindSpawnPosition();
-
 		// Set correct size
-		UpdateSize ();
-		UnfreezeUserInput();
+		//UpdateSize ();
+		//UnfreezeUserInput();
 
-		jumpButtonReleased = true;
-		fireTime1 = 0;
-		fireTime2 = 0;
+		//jumpButtonReleased = true;
+		//fireTime1 = 0;
+		//fireTime2 = 0;
 		
 	}
 
@@ -166,9 +112,10 @@ public class Mario : Agent {
 	}
 
 	public override void OnActionReceived(float[] action)
-    {	
-		//AddReward(this.transform.position.x/193f);
-		//AddReward(-1 + (t_LevelManager.timeLeft/400f));
+    {			
+		//AddReward(0.01f * this.transform.position.x/193f);
+		AddReward(0.0001f * this.transform.position.x/193f);
+		//AddReward(0.000001f*(-1 + (t_LevelManager.timeLeft/400f)));
 		
 		MoveAgent(action);
 				
@@ -179,7 +126,7 @@ public class Mario : Agent {
 		if (!inputFreezed) {
 			faceDirectionX = act[0]; // > 0 for right, < 0 for left			
 			isDashing = (act[2]==0)?true:false;
-			isCrouching = (act[3]==1)?true:false;
+			isCrouching = false;
 			isShooting = (act[2]==1)?true:false;
 			jumpButtonHeld = (act[1]==1)?true:false;			
 			jumpButtonReleased = true;
@@ -203,10 +150,10 @@ public class Mario : Agent {
 				}
 			} else if (isClimbingFlagPole) {
 				//m_Rigidbody2D.MovePosition (m_Rigidbody2D.position + climbFlagPoleVelocity * Time.deltaTime);
-				Debug.Log("Mario has reached goal, reward +1");
+				/*Debug.Log("Mario has reached goal, reward +1");
 				SetReward(1f);
 				EndEpisode();
-				SceneManager.LoadScene ("World 1-1");
+				SceneManager.LoadScene ("World 1-1");*/
 			}
 		}
 		
@@ -461,7 +408,7 @@ public class Mario : Agent {
 		gameObject.layer = LayerMask.NameToLayer ("Falling to Kill Plane");
 		gameObject.GetComponent<SpriteRenderer>().sortingLayerName = "Foreground Effect";	*/
 
-		AddReward(-0.5f);
+		//AddReward(-0.5f);
 		//EndEpisode();		
 		//SceneManager.LoadScene ("World 1-1");	
 	}
@@ -562,16 +509,17 @@ public class Mario : Agent {
 		if (other.gameObject.tag.Contains ("Enemy")) { // TODO: koopa shell static does no damage
 			Enemy enemy = other.gameObject.GetComponent<Enemy> ();			
 
-			if (!t_LevelManager.isInvincible ()) {				
-											
-				if (!other.gameObject.GetComponent<KoopaShell> () || 
-					other.gameObject.GetComponent<KoopaShell> ().isRolling ||  // non-rolling shell should do no damage
-					!t_LevelManager.stompedInteraction ||
-					!bottomHit || (bottomHit && !enemy.isBeingStomped)) 
-				{					
-					Debug.Log (this.name + " OnCollisionEnter2D: Damaged by " + other.gameObject.name
-						+ " from " + normal.ToString () + "; isFalling=" + isFalling); // TODO sometimes fire before stompbox reacts
-						t_LevelManager.MarioPowerDown ();
+			if (!t_LevelManager.isInvincible ()) {			
+				if(t_LevelManager.stompedInteraction==false)
+				{
+					if (!other.gameObject.GetComponent<KoopaShell> () || 
+						other.gameObject.GetComponent<KoopaShell> ().isRolling ||  // non-rolling shell should do no damage
+						!bottomHit || (bottomHit && !enemy.isBeingStomped)) 
+						{					
+							Debug.Log (this.name + " OnCollisionEnter2D: Damaged by " + other.gameObject.name
+								+ " from " + normal.ToString () + "; isFalling=" + isFalling); // TODO sometimes fire before stompbox reacts
+								t_LevelManager.MarioPowerDown ();
+						}
 				}
 			} else if (t_LevelManager.isInvincibleStarman) {
 				t_LevelManager.MarioStarmanTouchEnemy (enemy);

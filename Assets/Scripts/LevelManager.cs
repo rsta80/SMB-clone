@@ -82,16 +82,11 @@ public class LevelManager : MonoBehaviour {
 
 
 	void Awake() {
-		
+		Time.timeScale = 20; //TIME
 	}
 
 	// Use this for initialization
 	void Start () {
-		//Time.timeScale = 1; //TIME
-	}
-
-	public void Init(){
-		Time.timeScale = 1; //TIME
 		t_GameStateManager = FindObjectOfType<GameStateManager>();
 		RetrieveGameState ();
 
@@ -119,18 +114,12 @@ public class LevelManager : MonoBehaviour {
 	}
 
 	void RetrieveGameState() {
-		/*marioSize = t_GameStateManager.marioSize;
+		marioSize = t_GameStateManager.marioSize;
 		lives = t_GameStateManager.lives;
 		coins = t_GameStateManager.coins;
 		scores = t_GameStateManager.scores;
 		timeLeft = t_GameStateManager.timeLeft;
-		hurryUp = t_GameStateManager.hurryUp;*/
-		marioSize = 0;
-		lives = 1;
-		coins = 0;
-		scores = 0;
-		timeLeft = 400.5f;
-		hurryUp = false;
+		hurryUp = t_GameStateManager.hurryUp;
 	}
 
 
@@ -279,7 +268,7 @@ public class LevelManager : MonoBehaviour {
 		yield return new WaitForSecondsRealtime (transformDuration);
 		yield return new WaitWhile(() => gamePaused);
 
-		Time.timeScale = 1; //TIME
+		Time.timeScale = 20; //TIME
 		mario_Animator.updateMode = AnimatorUpdateMode.Normal;
 
 		marioSize++;
@@ -312,7 +301,7 @@ public class LevelManager : MonoBehaviour {
 		yield return new WaitForSecondsRealtime (transformDuration);
 		yield return new WaitWhile(() => gamePaused);
 
-		Time.timeScale = 1; //TIME
+		Time.timeScale = 20; //TIME
 		mario_Animator.updateMode = AnimatorUpdateMode.Normal;
 		MarioInvinciblePowerdown ();
 
@@ -436,17 +425,15 @@ public class LevelManager : MonoBehaviour {
 	}
 
 	public void ReloadCurrentLevel(float delay = loadSceneDelay, bool timeup = false) {		
-		//t_GameStateManager.SaveGameState ();
-		//t_GameStateManager.ConfigReplayedLevel ();
+		t_GameStateManager.SaveGameState ();
+		t_GameStateManager.ConfigReplayedLevel ();
 		isRespawning = false;
 		isPoweringDown = false;	
-
-		Destroy(mario.enemies,0f);
-		Destroy(mario.blocks,0f);
 		Debug.Log("Mario died, reward -0.5");
+		mario.AddReward(mario.transform.position.x/193f);
 		mario.AddReward(-0.5f);	
 		mario.EndEpisode();
-		//SceneManager.LoadScene ("World 1-1");
+		SceneManager.LoadScene ("World 1-1");
 		/*t_GameStateManager.sceneToLoad = SceneManager.GetActiveScene ().name;
 		if (timeup) {
 			LoadSceneDelay ("Time Up Screen", delay);
@@ -455,14 +442,14 @@ public class LevelManager : MonoBehaviour {
 		}*/
 	}
 
-	/*public void LoadGameOver(float delay = loadSceneDelay, bool timeup = false) {
+	public void LoadGameOver(float delay = loadSceneDelay, bool timeup = false) {
 		int currentHighScore = PlayerPrefs.GetInt ("highScore", 0);
 		if (scores > currentHighScore) {
 			PlayerPrefs.SetInt ("highScore", scores);
 		}
 		t_GameStateManager.timeup = timeup;
 		LoadSceneDelay ("Game Over Screen", delay);
-	}*/
+	}
 
 
 	/****************** HUD and sound effects */
@@ -581,17 +568,17 @@ public class LevelManager : MonoBehaviour {
 	/****************** Misc */
 	public Vector3 FindSpawnPosition() {
 		Vector3 spawnPosition;
-		//GameStateManager t_GameStateManager = FindObjectOfType<GameStateManager>();
-		/*Debug.Log (this.name + " FindSpawnPosition: GSM spawnFromPoint=" + t_GameStateManager.spawnFromPoint.ToString()
+		GameStateManager t_GameStateManager = FindObjectOfType<GameStateManager>();
+		Debug.Log (this.name + " FindSpawnPosition: GSM spawnFromPoint=" + t_GameStateManager.spawnFromPoint.ToString()
 			+ " spawnPipeIdx= " + t_GameStateManager.spawnPipeIdx.ToString() 
-			+ " spawnPointIdx=" + t_GameStateManager.spawnPointIdx.ToString());*/
-		/*if (mario.spawnFromPoint) {
+			+ " spawnPointIdx=" + t_GameStateManager.spawnPointIdx.ToString());
+		if (t_GameStateManager.spawnFromPoint) {
 			//spawnPosition = GameObject.Find ("Spawn Points").transform.GetChild (t_GameStateManager.spawnPointIdx).transform.position;			
-			//spawnPosition = GameObject.Find ("Spawn Points").transform.GetChild (0).transform.position;	*/		
+			//spawnPosition = GameObject.Find ("Spawn Points").transform.GetChild (0).transform.position;			
 			spawnPosition = new Vector3(0.0f, 1.0f, 0.0f);
-		/*} else {
+		} else {
 			spawnPosition = GameObject.Find ("Spawn Pipes").transform.GetChild (t_GameStateManager.spawnPipeIdx).transform.Find("Spawn Pos").transform.position;
-		}*/
+		}
 		return spawnPosition;
 	}
 
@@ -618,8 +605,13 @@ public class LevelManager : MonoBehaviour {
 	}
 
 	public void MarioReachFlagPole() {
-		timerPaused = true;
+		/*timerPaused = true;
 		PauseMusicPlaySound (flagpoleSound, false);
-		mario.ClimbFlagPole ();
+		mario.ClimbFlagPole ();*/
+		Debug.Log("Mario reached the goal, reward +1");
+		mario.AddReward(3f);
+		mario.SetReward(3.0f);	
+		mario.EndEpisode();
+		SceneManager.LoadScene ("World 1-1");
 	}
 }
